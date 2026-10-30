@@ -24,27 +24,32 @@ Current agents:
 | Observability Agent | observability package, traceability and operational-health validations |
 | Release Readiness Agent | release runbook, engineering summary, release validation |
 
-## Dependency graph
+## Dependency Graph
 
 ```mermaid
 flowchart TD
-    R[requirements] --> A[architecture gate]
-    A --> I[implementation]
-    I --> S[security review]
-    I --> P[performance review]
-    S --> Q[QA validation]
+    R[Requirements] --> A[Architecture Gate]
+    A --> I[Implementation]
+    I --> S[Security Review]
+    I --> P[Performance Review]
+    S --> Q[QA Validation]
     P --> Q
-    Q --> O[observability]
-    O --> G[release readiness gate]
+    Q --> O[Observability]
+    O --> G[Release Readiness Gate]
 ```
 
-The security and performance tasks are independently eligible after implementation and execute in parallel. QA is synchronized on both. The graph is stored in each run snapshot with task IDs, dependencies, status, attempts, and errors.
+The security and performance tasks are independently eligible after implementation and execute in parallel in automatic mode. Manual mode advances one of those ready tasks per request. QA is synchronized on both. The graph is stored in each run snapshot with task IDs, dependencies, status, attempts, and errors.
+
+## Execution modes
+
+Automatic execution is the default: the orchestrator runs dependency-ready tasks until it reaches an approval gate. A custom run can opt into manual step mode with `stepMode: true`. Starting that run executes Requirements and returns `AwaitingStep`; `POST /api/orchestration/runs/{id}/steps` executes one next eligible task and returns the updated snapshot. When Architecture or Release Readiness requires approval, the run returns `AwaitingApproval`. Approval in manual mode enables the next step but does not execute it. The report UI at `/report.html` supports mode selection, step advancement, gate decisions, and loading a run by ID.
 
 ## State and gates
 
 A run has these statuses:
 
 - `Running`: ready tasks are being executed
+- `AwaitingStep`: a manual-mode run is waiting for the user to execute one next task
 - `AwaitingApproval`: a completed gated task is waiting for human approval
 - `Replanning`: the active plan is being invalidated and replaced
 - `Completed`: every graph task succeeded and release approval was recorded

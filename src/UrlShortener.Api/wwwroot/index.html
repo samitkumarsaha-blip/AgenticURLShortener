@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agentic URL Shortener</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: #121a2b;
+        --panel-alt: #1b2740;
+        --primary: #7dd3fc;
+        --primary-strong: #38bdf8;
+        --text: #e5eefb;
+        --muted: #a7b8d8;
+        --danger: #fca5a5;
+        --success: #86efac;
+        --border: rgba(148, 163, 184, 0.2);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, #0b1020 0%, #111827 100%);
+        color: var(--text);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      .app {
+        width: min(900px, 100%);
+        background: rgba(18, 26, 43, 0.85);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.45);
+        overflow: hidden;
+      }
+
+      .header {
+        background: rgba(99, 102, 241, 0.1);
+        border-bottom: 1px solid var(--border);
+        padding: 24px 28px;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 3vw, 2.5rem);
+      }
+
+      .header p {
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+
+      .content {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 24px;
+        padding: 28px;
+      }
+
+      @media (max-width: 768px) {
+        .content {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: rgba(27, 39, 64, 0.9);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      input, button {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        font: inherit;
+      }
+
+      input {
+        background: rgba(15, 23, 42, 0.8);
+        color: var(--text);
+        padding: 12px 14px;
+        margin-bottom: 16px;
+      }
+
+      button {
+        cursor: pointer;
+        padding: 12px 18px;
+        color: #04111d;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
+        border: none;
+        font-weight: 700;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 18px rgba(56, 189, 248, 0.25);
+      }
+
+      .result {
+        display: none;
+        margin-top: 16px;
+        padding: 16px;
+        border-radius: 12px;
+        border: 1px solid rgba(134, 239, 172, 0.35);
+        background: rgba(22, 101, 52, 0.15);
+      }
+
+      .result.visible {
+        display: block;
+      }
+
+      .error {
+        display: none;
+        margin-top: 16px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        border: 1px solid rgba(252, 165, 165, 0.4);
+        background: rgba(127, 29, 29, 0.18);
+        color: var(--danger);
+      }
+
+      .error.visible {
+        display: block;
+      }
+
+      .meta {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 0.96rem;
+      }
+
+      .short-link {
+        margin-top: 10px;
+        word-break: break-all;
+      }
+
+      .short-link a {
+        color: var(--primary);
+        text-decoration: none;
+      }
+
+      .short-link a:hover {
+        text-decoration: underline;
+      }
+
+      ul {
+        margin: 12px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      li + li {
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <div class="header">
+        <h1>Agentic URL Shortener</h1>
+        <p>Create branded, time-bound short links in seconds.</p>
+      </div>
+
+      <div class="content">
+        <section class="card">
+          <form id="shortenForm">
+            <div>
+              <label for="destinationUrl">Destination URL</label>
+              <input id="destinationUrl" type="url" placeholder="https://example.com" required />
+            </div>
+
+            <div>
+              <label for="alias">Custom alias (optional)</label>
+              <input id="alias" type="text" placeholder="docs-v1" maxlength="40" />
+            </div>
+
+            <div>
+              <label for="ttlMinutes">Expiry (minutes, optional)</label>
+              <input id="ttlMinutes" type="number" min="1" placeholder="60" />
+            </div>
+
+            <button type="submit">Create short link</button>
+          </form>
+
+          <div id="result" class="result" aria-live="polite"></div>
+          <div id="error" class="error" aria-live="assertive"></div>
+        </section>
+
+        <aside class="card">
+          <h2>What this does</h2>
+          <ul>
+            <li>Validates destination URLs before creating a short code.</li>
+            <li>Supports optional custom aliases and expiration windows.</li>
+            <li>Tracks click analytics and exposes redirect resolution.</li>
+          </ul>
+
+          <div class="meta">
+            API base: <strong id="apiBase">/api/urls</strong>
+          </div>
+          <div class="meta" style="margin-top: 14px;">
+            <a href="/report.html" style="color: var(--primary); text-decoration: none; font-weight: 700;">Open orchestration report</a>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <script>
+      const form = document.getElementById('shortenForm');
+      const resultBox = document.getElementById('result');
+      const errorBox = document.getElementById('error');
+      const destinationUrl = document.getElementById('destinationUrl');
+      const alias = document.getElementById('alias');
+      const ttlMinutes = document.getElementById('ttlMinutes');
+
+      function showError(message) {
+        errorBox.textContent = message;
+        errorBox.classList.add('visible');
+        resultBox.classList.remove('visible');
+      }
+
+      function showResult(payload) {
+        const shortUrl = `${window.location.origin}/api/urls/${payload.code}`;
+        resultBox.innerHTML = `
+          <strong>Short link created</strong>
+          <div class="short-link"><a href="${shortUrl}" target="_blank" rel="noopener noreferrer">${shortUrl}</a></div>
+          <div class="meta">Original: ${payload.url}</div>
+          <div class="meta">Clicks: ${payload.clickCount}</div>
+        `;
+        resultBox.classList.add('visible');
+        errorBox.classList.remove('visible');
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const requestBody = {
+          url: destinationUrl.value.trim(),
+          alias: alias.value.trim() || undefined,
+          ttlMinutes: ttlMinutes.value ? Number(ttlMinutes.value) : undefined
+        };
+
+        try {
+          const response = await fetch('/api/urls', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+          });
+
+          const data = await response.json().catch(() => null);
+
+          if (!response.ok) {
+            const message = data?.detail || data?.title || 'Unable to create short URL.';
+            throw new Error(message);
+          }
+
+          showResult(data);
+          form.reset();
+        } catch (error) {
+          showError(error.message || 'Something went wrong.');
+        }
+      });
+    </script>
+  </body>
+</html>

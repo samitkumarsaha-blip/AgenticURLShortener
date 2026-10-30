@@ -67,9 +67,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseRateLimiter();
 app.UseAuthorization();
+
+app.MapGet("/index.html", () => Results.File(Path.Combine(app.Environment.WebRootPath, "index.html"), "text/html"));
+app.MapGet("/report.html", () => Results.File(Path.Combine(app.Environment.WebRootPath, "report.html"), "text/html"));
 
 app.MapControllers();
 

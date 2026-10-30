@@ -51,11 +51,14 @@ Operational endpoints:
 - `POST /api/orchestration/runs`
 - `POST /api/orchestration/scenarios/{scenario}/runs`
 - `GET /api/orchestration/runs/{id}`
+- `POST /api/orchestration/runs/{id}/steps`
 - `POST /api/orchestration/runs/{id}/approvals`
 - `POST /api/orchestration/runs/{id}/replan`
 - `POST /api/orchestration/runs/{id}/rollback`
 
-The engine executes a dependency graph with parallel review branches, approval gates, bounded retries, safe-stop, checkpoints, rollback, audit lineage, plan versions, durable run snapshots, and stage-specific artifacts. Agents produce normalized requirements, architecture records, implementation evidence, QA evidence, observability evidence, and release artifacts.
+The engine executes a dependency graph with parallel review branches, approval gates, bounded retries, safe-stop, checkpoints, rollback, audit lineage, plan versions, durable run snapshots, and stage-specific artifacts. Runs default to automatic execution through each approval gate; optional manual step mode advances one dependency-ready task per request. Agents produce normalized requirements, architecture records, implementation evidence, QA evidence, observability evidence, and release artifacts.
+
+Open `/report.html` to view the request journey, create runs, enable manual step mode, approve or reject gates, and load or refresh a run by ID.
 
 ## Test and build
 
@@ -64,7 +67,7 @@ dotnet build UrlShortener.sln --no-restore -v:q
 dotnet test UrlShortener.sln --no-build -v:q
 ```
 
-The tests include URL security validation, orchestration failure/retry/rollback/replan behavior, database migrations, redirect analytics, correlation IDs, and HTTP orchestration approval flow. The current suite contains 10 unit tests and 2 integration tests.
+The tests include URL security validation, orchestration failure/retry/rollback/replan behavior, manual task-by-task progression, database migrations, redirect analytics, correlation IDs, and HTTP orchestration approval flow. The current suite contains 11 unit tests and 2 integration tests.
 
 ## Project layout
 

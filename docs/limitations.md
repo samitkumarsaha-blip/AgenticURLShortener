@@ -4,7 +4,7 @@ This document records what is intentionally not covered by the current implement
 
 ## 1. Restart-safe orchestration commands
 
-**Current state:** Workflow snapshots are persisted, and a run can be loaded after restart. The current in-memory orchestrator fully owns active-run mutations; approval, replan, and rollback commands for a run that exists only in storage require hydration into the active execution context.
+**Current state:** Workflow snapshots are persisted, and a run can be loaded after restart. The current in-memory orchestrator fully owns active-run mutations; step advancement, approval, replan, and rollback commands for a run that exists only in storage require hydration into the active execution context.
 
 **Why not complete:** The first implementation focused on making the lifecycle and recovery behavior deterministic and observable. Full restart recovery requires reconstructing execution locks, agent registrations, cancellation state, and idempotency behavior, not only deserializing JSON.
 

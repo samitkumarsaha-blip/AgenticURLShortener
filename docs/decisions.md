@@ -47,3 +47,9 @@
 **Decision:** Enforce protocol, host/IP, alias, TTL, and input-size rules in the application/domain path, with in-process rate limiting at the API boundary.
 
 **Reasoning:** These controls block common unsafe inputs before persistence. They are not a complete outbound network policy; production deployment must add DNS rebinding defenses, egress restrictions, authentication, abuse monitoring, and distributed rate limiting.
+
+## ADR-009: Optional manual workflow progression
+
+**Decision:** Keep automatic dependency execution as the default and provide an opt-in manual step mode that advances one ready task per request.
+
+**Reasoning:** The report UI needs an inspectable, user-controlled travel path through individual tasks while preserving the existing automatic workflow for API clients. Architecture and release-readiness remain explicit human approval gates in both modes.

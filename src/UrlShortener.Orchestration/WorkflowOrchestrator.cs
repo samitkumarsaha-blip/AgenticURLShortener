@@ -5,6 +5,7 @@ namespace UrlShortener.Orchestration;
 public interface IWorkflowOrchestrator
 {
     Task<WorkflowRun> StartAsync(StartWorkflowRequest request, CancellationToken cancellationToken);
+    Task<WorkflowRun?> AdvanceStepAsync(Guid id, CancellationToken cancellationToken);
     Task<WorkflowRun?> GetAsync(Guid id, CancellationToken cancellationToken);
     Task<WorkflowRun?> ApproveAsync(Guid id, ApprovalRequest request, CancellationToken cancellationToken);
     Task<WorkflowRun?> ReplanAsync(Guid id, ReplanRequest request, CancellationToken cancellationToken);
@@ -31,10 +32,33 @@ public sealed class WorkflowOrchestrator(IEnumerable<IWorkflowAgent> agents, IWo
             throw new ArgumentException("Requirements are required.", nameof(request));
         }
 
-        var run = new WorkflowRun { Requirements = request.Requirements, Scenario = request.Scenario };
+        var run = new WorkflowRun
+        {
+            Requirements = request.Requirements,
+            Scenario = request.Scenario,
+            StepMode = request.StepMode
+        };
         BuildPlan(run);
         runs[run.Id] = run;
         AddAudit(run, $"workflow started as {run.Scenario}; plan version {run.PlanVersion}.");
+        await ExecuteReadyTasksAsync(run, cancellationToken);
+        await PersistAsync(run, cancellationToken);
+        return run;
+    }
+
+    public async Task<WorkflowRun?> AdvanceStepAsync(Guid id, CancellationToken cancellationToken)
+    {
+        if (!runs.TryGetValue(id, out var run))
+        {
+            return null;
+        }
+
+        if (!run.StepMode || run.Status != WorkflowStatus.AwaitingStep)
+        {
+            throw new InvalidOperationException("The workflow is not waiting for a manual step.");
+        }
+
+        run.Status = WorkflowStatus.Running;
         await ExecuteReadyTasksAsync(run, cancellationToken);
         await PersistAsync(run, cancellationToken);
         return run;
@@ -66,6 +90,13 @@ public sealed class WorkflowOrchestrator(IEnumerable<IWorkflowAgent> agents, IWo
 
         run.ApprovedStages.Add(stage);
         run.Status = WorkflowStatus.Running;
+        if (run.StepMode)
+        {
+            SetManualStepState(run);
+            await PersistAsync(run, cancellationToken);
+            return run;
+        }
+
         await ExecuteReadyTasksAsync(run, cancellationToken);
         await PersistAsync(run, cancellationToken);
         return run;
@@ -129,7 +160,7 @@ public sealed class WorkflowOrchestrator(IEnumerable<IWorkflowAgent> agents, IWo
 
     private async Task ExecuteReadyTasksAsync(WorkflowRun run, CancellationToken cancellationToken)
     {
-        if (run.Status is WorkflowStatus.Rejected or WorkflowStatus.SafeStopped)
+        if (run.Status is WorkflowStatus.Rejected or WorkflowStatus.SafeStopped or WorkflowStatus.Completed)
         {
             return;
         }
@@ -137,12 +168,30 @@ public sealed class WorkflowOrchestrator(IEnumerable<IWorkflowAgent> agents, IWo
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var readyTasks = run.Tasks.Where(task =>
-                (task.Status is WorkflowTaskStatus.Pending or WorkflowTaskStatus.Invalidated) &&
-                task.Dependencies.All(dependency => run.Tasks.Single(candidate => candidate.Id == dependency).Status == WorkflowTaskStatus.Succeeded)).ToList();
+            var readyTasks = GetReadyTasks(run);
             if (readyTasks.Count == 0)
             {
                 run.Status = run.Tasks.All(task => task.Status == WorkflowTaskStatus.Succeeded) ? WorkflowStatus.Completed : run.Status;
+                return;
+            }
+
+            if (run.StepMode)
+            {
+                var task = readyTasks[0];
+                await ExecuteTaskWithRetryAsync(run, task, cancellationToken);
+                if (run.Status == WorkflowStatus.SafeStopped)
+                {
+                    return;
+                }
+
+                if (task.Status == WorkflowTaskStatus.Succeeded && IsApprovalGate(task) && !run.ApprovedStages.Contains(task.Stage))
+                {
+                    run.CurrentStage = task.Stage;
+                    run.Status = WorkflowStatus.AwaitingApproval;
+                    return;
+                }
+
+                SetManualStepState(run);
                 return;
             }
 
@@ -163,6 +212,28 @@ public sealed class WorkflowOrchestrator(IEnumerable<IWorkflowAgent> agents, IWo
                 return;
             }
         }
+    }
+
+    private static List<WorkflowTask> GetReadyTasks(WorkflowRun run) => run.Tasks.Where(task =>
+        (task.Status is WorkflowTaskStatus.Pending or WorkflowTaskStatus.Invalidated) &&
+        task.Dependencies.All(dependency => run.Tasks.Single(candidate => candidate.Id == dependency).Status == WorkflowTaskStatus.Succeeded)).ToList();
+
+    private static bool IsApprovalGate(WorkflowTask task) =>
+        task.Stage is WorkflowStage.Architecture or WorkflowStage.ReleaseReadiness;
+
+    private static void SetManualStepState(WorkflowRun run)
+    {
+        var nextTask = GetReadyTasks(run).FirstOrDefault();
+        if (nextTask is null)
+        {
+            run.Status = run.Tasks.All(task => task.Status == WorkflowTaskStatus.Succeeded)
+                ? WorkflowStatus.Completed
+                : WorkflowStatus.SafeStopped;
+            return;
+        }
+
+        run.CurrentStage = nextTask.Stage;
+        run.Status = WorkflowStatus.AwaitingStep;
     }
 
     private async Task ExecuteTaskWithRetryAsync(WorkflowRun run, WorkflowTask task, CancellationToken cancellationToken)

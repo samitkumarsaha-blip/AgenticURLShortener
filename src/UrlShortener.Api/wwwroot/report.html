@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orchestration Report</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: #111827;
+        --panel-alt: #1f2937;
+        --text: #edf2ff;
+        --muted: #b8c1d9;
+        --border: rgba(148, 163, 184, 0.25);
+        --primary: #7dd3fc;
+        --accent: #a78bfa;
+        --success: #86efac;
+        --warning: #fbbf24;
+        --danger: #fca5a5;
+        --info: #93c5fd;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: linear-gradient(180deg, #0b1020, #111827 40%, #0f172a);
+        color: var(--text);
+        font-family: Inter, "Segoe UI", sans-serif;
+        padding: 24px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 4vw, 3rem);
+      }
+
+      .link-btn {
+        display: inline-block;
+        padding: 10px 16px;
+        border-radius: 10px;
+        background: rgba(125, 211, 252, 0.12);
+        border: 1px solid var(--border);
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .panel {
+        background: rgba(17, 24, 39, 0.9);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.35);
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: 220px 1fr 160px;
+        gap: 14px;
+        align-items: end;
+      }
+
+      @media (max-width: 860px) {
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      select, textarea, button {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        font: inherit;
+      }
+
+      select, textarea {
+        background: rgba(15, 23, 42, 0.85);
+        color: var(--text);
+        padding: 12px 14px;
+      }
+
+      textarea {
+        min-height: 120px;
+        resize: vertical;
+      }
+
+      button {
+        cursor: pointer;
+        padding: 14px 18px;
+        border: none;
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: #06131f;
+        font-weight: 800;
+      }
+
+      .status-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+        margin-top: 20px;
+      }
+
+      .stat {
+        background: rgba(31, 41, 55, 0.82);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px 16px;
+      }
+
+      .stat-label {
+        color: var(--muted);
+        display: block;
+        margin-bottom: 6px;
+        font-size: 0.8rem;
+      }
+
+      .stat-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 20px;
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: rgba(17, 24, 39, 0.88);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+      }
+
+      .stage-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .stage {
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--info);
+        background: rgba(15, 23, 42, 0.75);
+        border-radius: 12px;
+        padding: 12px 14px;
+      }
+
+      .stage[data-status="Succeeded"] { border-left-color: var(--success); }
+      .stage[data-status="Running"] { border-left-color: var(--warning); }
+      .stage[data-status="InProgress"] { border-left-color: var(--warning); }
+      .stage[data-status="Failed"] { border-left-color: var(--danger); }
+      .stage[data-status="Pending"] { border-left-color: var(--info); }
+
+      .stage-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.12);
+        border: 1px solid var(--border);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .audit-list, .artifact-list, .validation-list, .risk-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .audit-list li, .artifact-list li, .validation-list li, .risk-list li {
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .audit-list li:last-child,
+      .artifact-list li:last-child,
+      .validation-list li:last-child,
+      .risk-list li:last-child {
+        border-bottom: none;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .empty {
+        color: var(--muted);
+        padding: 12px 0;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .run-lookup {
+        display: grid;
+        grid-template-columns: 1fr 160px;
+        gap: 14px;
+        align-items: end;
+        margin-top: 20px;
+        padding-top: 18px;
+        border-top: 1px solid var(--border);
+      }
+
+      .run-lookup input, .approval-fields input {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.85);
+        color: var(--text);
+        padding: 12px 14px;
+        font: inherit;
+      }
+
+      .step-mode {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .step-mode input {
+        width: auto;
+        accent-color: var(--primary);
+      }
+
+      .step-mode label {
+        margin: 0;
+      }
+
+      .gate-panel {
+        margin-top: 20px;
+      }
+
+      .approval-fields {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .approval-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .approval-actions button {
+        max-width: 180px;
+      }
+
+      .approval-actions .reject {
+        background: rgba(252, 165, 165, 0.15);
+        border: 1px solid var(--danger);
+        color: var(--text);
+      }
+
+      .notice {
+        margin: 14px 0 0;
+        color: var(--warning);
+      }
+
+      @media (max-width: 700px) {
+        .run-lookup, .approval-fields {
+          grid-template-columns: 1fr;
+        }
+
+        .approval-actions {
+          flex-direction: column;
+        }
+
+        .approval-actions button {
+          max-width: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1>Request Journey Report</h1>
+        <a class="link-btn" href="/">Back to URL shortener</a>
+      </header>
+
+      <section class="panel">
+        <form id="reportForm">
+          <div class="form-grid">
+            <div>
+              <label for="scenario">Scenario</label>
+              <select id="scenario"></select>
+            </div>
+            <div>
+              <label for="requirements">Request requirements</label>
+              <textarea id="requirements" placeholder="Describe the request or business need you want the workflow to process..."></textarea>
+            </div>
+            <div>
+              <label>&nbsp;</label>
+              <button type="submit">Generate travel path</button>
+            </div>
+          </div>
+          <div class="step-mode">
+            <input id="stepMode" type="checkbox" />
+            <label for="stepMode">Manual step mode</label>
+          </div>
+        </form>
+        <form id="runLookupForm" class="run-lookup">
+          <div>
+            <label for="lookupRunId">Load or refresh a run</label>
+            <input id="lookupRunId" type="text" autocomplete="off" placeholder="Workflow run ID" />
+          </div>
+          <button type="submit">Load run</button>
+        </form>
+        <p id="message" class="notice hidden" role="status"></p>
+      </section>
+
+      <section id="gatePanel" class="panel gate-panel hidden">
+        <h2>Approval required: <span id="gateStage"></span></h2>
+        <form id="approvalForm">
+          <div class="approval-fields">
+            <div>
+              <label for="reviewer">Reviewer</label>
+              <input id="reviewer" name="reviewer" required value="Operator" />
+            </div>
+            <div>
+              <label for="rationale">Decision rationale</label>
+              <textarea id="rationale" name="rationale" required placeholder="Record why this gate is approved or rejected."></textarea>
+            </div>
+          </div>
+          <div class="approval-actions">
+            <button type="submit" value="true">Approve and continue</button>
+            <button class="reject" type="submit" value="false">Reject run</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="stepPanel" class="panel gate-panel hidden">
+        <h2>Next task: <span id="stepTask"></span></h2>
+        <p class="muted">Stage: <span id="stepStage"></span></p>
+        <button id="runNextStep" type="button">Run next step</button>
+      </section>
+
+      <section id="summary" class="status-row hidden">
+        <div class="stat">
+          <span class="stat-label">Run ID</span>
+          <span id="runId" class="stat-value"></span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Scenario</span>
+          <span id="runScenario" class="stat-value"></span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Current stage</span>
+          <span id="currentStage" class="stat-value"></span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Status</span>
+          <span id="runStatus" class="stat-value"></span>
+        </div>
+      </section>
+
+      <section class="layout">
+        <div class="card">
+          <h2>Travel path</h2>
+          <div id="stages" class="stage-list"></div>
+        </div>
+
+        <div class="card">
+          <h2>Audit trail</h2>
+          <ul id="auditTrail" class="audit-list"></ul>
+        </div>
+      </section>
+
+      <section class="layout">
+        <div class="card">
+          <h2>Artifacts</h2>
+          <ul id="artifacts" class="artifact-list"></ul>
+        </div>
+
+        <div class="card">
+          <h2>Controls and evidence</h2>
+          <ul id="validations" class="validation-list"></ul>
+        </div>
+      </section>
+
+      <section class="layout">
+        <div class="card">
+          <h2>Decisions</h2>
+          <ul id="decisions" class="decision-list"></ul>
+        </div>
+
+        <div class="card">
+          <h2>Risk watch</h2>
+          <ul id="risks" class="risk-list"></ul>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const stageOrder = [
+        'Requirements',
+        'Architecture',
+        'Implementation',
+        'QaValidation',
+        'Observability',
+        'ReleaseReadiness'
+      ];
+
+      const scenarioSelect = document.getElementById('scenario');
+      const requirements = document.getElementById('requirements');
+      const reportForm = document.getElementById('reportForm');
+      const runLookupForm = document.getElementById('runLookupForm');
+      const lookupRunId = document.getElementById('lookupRunId');
+      const approvalForm = document.getElementById('approvalForm');
+      const gatePanel = document.getElementById('gatePanel');
+      const gateStage = document.getElementById('gateStage');
+      const stepPanel = document.getElementById('stepPanel');
+      const stepTask = document.getElementById('stepTask');
+      const stepStage = document.getElementById('stepStage');
+      const runNextStep = document.getElementById('runNextStep');
+      const message = document.getElementById('message');
+      const summary = document.getElementById('summary');
+      const runId = document.getElementById('runId');
+      const runScenario = document.getElementById('runScenario');
+      const currentStage = document.getElementById('currentStage');
+      const runStatus = document.getElementById('runStatus');
+      const stagesEl = document.getElementById('stages');
+      const auditTrailEl = document.getElementById('auditTrail');
+      const artifactsEl = document.getElementById('artifacts');
+      const validationsEl = document.getElementById('validations');
+      const decisionsEl = document.getElementById('decisions');
+      const risksEl = document.getElementById('risks');
+
+      function renderStageList(tasks) {
+        stagesEl.innerHTML = '';
+
+        const ordered = stageOrder.map((name) => {
+          const matching = tasks.filter(task => task.stage === name);
+          const statuses = matching.map(task => task.status);
+          const status = statuses.includes('Failed') ? 'Failed'
+            : statuses.includes('Running') ? 'Running'
+            : statuses.length > 0 && statuses.every(taskStatus => taskStatus === 'Succeeded') ? 'Succeeded'
+            : statuses.includes('Succeeded') ? 'InProgress'
+            : 'Pending';
+          return { name, tasks: matching, status };
+        });
+
+        ordered.forEach((stage) => {
+          const card = document.createElement('div');
+          card.className = 'stage';
+          card.dataset.status = stage.status;
+
+          const tasksText = stage.tasks.length
+            ? stage.tasks.map(task => `${task.id} (${task.status})`).join('<br>')
+            : 'No task entries';
+
+          card.innerHTML = `
+            <div class="stage-header">
+              <strong>${stage.name}</strong>
+              <span class="pill">${stage.status}</span>
+            </div>
+            <div class="muted" style="margin-top: 8px;">${tasksText}</div>
+          `;
+          stagesEl.appendChild(card);
+        });
+      }
+
+      function renderList(listEl, items, formatter) {
+        listEl.innerHTML = '';
+        if (!items || items.length === 0) {
+          const empty = document.createElement('li');
+          empty.className = 'empty';
+          empty.textContent = 'No records available.';
+          listEl.appendChild(empty);
+          return;
+        }
+
+        items.forEach(item => {
+          const li = document.createElement('li');
+          li.innerHTML = formatter(item);
+          listEl.appendChild(li);
+        });
+      }
+
+      function renderRun(run) {
+        summary.classList.remove('hidden');
+        runId.textContent = run.id;
+        lookupRunId.value = run.id;
+        runScenario.textContent = run.scenario;
+        currentStage.textContent = run.currentStage || 'N/A';
+        runStatus.textContent = run.status || 'N/A';
+        const approvalRequired = run.status === 'AwaitingApproval';
+        const stepRequired = run.status === 'AwaitingStep';
+        gatePanel.classList.toggle('hidden', !approvalRequired);
+        gateStage.textContent = approvalRequired ? run.currentStage : '';
+        stepPanel.classList.toggle('hidden', !stepRequired);
+        const nextTask = (run.tasks || []).find(task =>
+          ['Pending', 'Invalidated'].includes(task.status) &&
+          task.dependencies.every(dependency => run.tasks.some(candidate => candidate.id === dependency && candidate.status === 'Succeeded')));
+        stepTask.textContent = stepRequired ? (nextTask?.id || run.currentStage) : '';
+        stepStage.textContent = stepRequired ? run.currentStage : '';
+        renderStageList(run.tasks || []);
+
+        renderList(auditTrailEl, run.auditTrail || [], (item) => `<span>${item}</span>`);
+        renderList(artifactsEl, run.artifacts || [], (item) => `<strong>${item.name}</strong><div class="muted">${item.description}</div><div class="muted">Stage: ${item.producedBy}</div>`);
+        renderList(validationsEl, run.validations || [], (item) => `<strong>${item.name}</strong><div class="muted">${item.evidence}</div><div class="muted">${item.passed ? 'Passed' : 'Failed'} • ${item.validatedAt}</div>`);
+        renderList(decisionsEl, run.decisions || [], (item) => `<strong>${item.decision}</strong><div class="muted">${item.rationale}</div><div class="muted">At: ${item.madeAt}</div>`);
+        renderList(risksEl, run.risks || [], (item) => `<span>${item}</span>`);
+      }
+
+      function showMessage(text) {
+        message.textContent = text;
+        message.classList.toggle('hidden', !text);
+      }
+
+      async function readRunResponse(response) {
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(body.detail || body.title || `Request failed (${response.status}).`);
+        }
+        return body;
+      }
+
+      async function loadScenarios() {
+        const res = await fetch('/api/orchestration/scenarios');
+        const scenarios = await res.json();
+        scenarioSelect.innerHTML = scenarios.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+        requirements.value = scenarios[0]?.requirement || '';
+      }
+
+      reportForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        showMessage('');
+
+        const scenario = scenarioSelect.value;
+        const payload = {
+          scenario,
+          requirements: requirements.value.trim() || 'Build a secure URL shortener with code generation, analytics, and operational controls.',
+          stepMode: document.getElementById('stepMode').checked
+        };
+
+        try {
+          const res = await fetch('/api/orchestration/runs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          renderRun(await readRunResponse(res));
+        } catch (error) {
+          showMessage(error.message || 'Unable to start orchestration run.');
+        }
+      });
+
+      runLookupForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const id = lookupRunId.value.trim();
+        if (!id) {
+          showMessage('Enter a workflow run ID to load it.');
+          return;
+        }
+
+        showMessage('');
+        try {
+          const res = await fetch(`/api/orchestration/runs/${encodeURIComponent(id)}`);
+          renderRun(await readRunResponse(res));
+        } catch (error) {
+          showMessage(error.message || 'Unable to load workflow run.');
+        }
+      });
+
+      runNextStep.addEventListener('click', async () => {
+        showMessage('');
+        runNextStep.disabled = true;
+        try {
+          const res = await fetch(`/api/orchestration/runs/${encodeURIComponent(runId.textContent)}/steps`, {
+            method: 'POST'
+          });
+          renderRun(await readRunResponse(res));
+        } catch (error) {
+          showMessage(error.message || 'Unable to advance workflow step.');
+        } finally {
+          runNextStep.disabled = false;
+        }
+      });
+
+      approvalForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const approved = event.submitter?.value === 'true';
+        const payload = {
+          stage: currentStage.textContent,
+          approved,
+          reviewer: document.getElementById('reviewer').value.trim(),
+          rationale: document.getElementById('rationale').value.trim()
+        };
+
+        showMessage('');
+        try {
+          const res = await fetch(`/api/orchestration/runs/${encodeURIComponent(runId.textContent)}/approvals`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          renderRun(await readRunResponse(res));
+          approvalForm.reset();
+          document.getElementById('reviewer').value = 'Operator';
+        } catch (error) {
+          showMessage(error.message || 'Unable to record approval decision.');
+        }
+      });
+
+      loadScenarios();
+    </script>
+  </body>
+</html>

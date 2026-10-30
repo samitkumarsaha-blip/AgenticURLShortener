@@ -14,9 +14,10 @@ The system converts URL-shortener requirements into a reviewable implementation 
 - Orchestration agents for requirements, architecture, implementation, QA, observability, and release readiness, each producing typed artifacts, decisions, risks, and validations
 - Explicit dependency graph with parallel security/performance branches
 - Human approval gates for architecture and release
+- Optional manual step mode with one-task advancement, gate decisions, and run-ID reload in the report UI
 - Bounded retry, safe-stop, checkpoint, rollback, selective replan, and audit lineage
 - Correlation IDs, structured logs, health, p50/p95/p99 metrics, and creation rate limiting
-- Unit and HTTP integration tests: 10 unit tests and 2 integration tests currently pass
+- Unit and HTTP integration tests: 11 unit tests and 2 integration tests currently pass
 
 ## Risks and trade-offs
 
@@ -26,7 +27,7 @@ The complete coverage-gap register is documented in [limitations.md](limitations
 
 ## Validation evidence
 
-`dotnet build UrlShortener.sln --no-restore -v:q` completes with zero warnings and zero errors. `dotnet test UrlShortener.sln --no-build -v:q` covers URL security, workflow state transitions, retry exhaustion, safe-stop, rollback, replanning, URL creation, correlation propagation, redirects, analytics persistence, and HTTP orchestration approval flow.
+`dotnet build UrlShortener.sln --no-restore -v:q` succeeds with zero errors. `dotnet test UrlShortener.sln --no-build -v:q` covers URL security, workflow state transitions and manual stepping, retry exhaustion, safe-stop, rollback, replanning, URL creation, correlation propagation, redirects, analytics persistence, and HTTP orchestration approval flow.
 
 ## Evaluation coverage
 

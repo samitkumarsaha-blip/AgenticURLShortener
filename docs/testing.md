@@ -11,6 +11,7 @@
 - alias character policy
 - Architecture and ReleaseReadiness approval gates
 - dependency graph progression
+- manual step mode advances one ready task and pauses at approval gates
 - parallel security/performance tasks
 - three-attempt retry limit
 - SafeStopped transition
@@ -41,7 +42,7 @@ dotnet build UrlShortener.sln --no-restore -v:q
 dotnet test UrlShortener.sln --no-build -v:q
 ```
 
-Expected current result: zero build warnings, zero build errors, 10 unit tests passed, and 2 integration tests passed.
+Expected current result: build succeeds, 11 unit tests pass, and 2 integration tests pass. Restore/build may report NU1900 vulnerability-feed warnings when the configured private NuGet feeds are unreachable.
 
 ## Security validation
 

@@ -53,6 +53,22 @@ curl -sS http://127.0.0.1:5080/api/orchestration/runs/{id}
 
 Review `status`, `currentStage`, `tasks`, `artifacts`, `validations`, `approvals`, `retryCount`, `rollbackCount`, `planVersion`, and `auditTrail`.
 
+For manual task-by-task execution, start a custom run with `stepMode: true`:
+
+```sh
+curl -sS -X POST http://127.0.0.1:5080/api/orchestration/runs \
+  -H 'Content-Type: application/json' \
+  -d '{"requirements":"Build a secure URL shortener","scenario":"greenfield","stepMode":true}'
+```
+
+The start response includes a run ID and an `AwaitingStep` status after the Requirements task. Advance exactly one dependency-ready task at a time:
+
+```sh
+curl -sS -X POST http://127.0.0.1:5080/api/orchestration/runs/{id}/steps
+```
+
+When a step reaches Architecture or Release Readiness, inspect the snapshot and submit the approval shown below. In manual mode, approval makes the next task available; call `/steps` again to execute it. The same workflow controls are available in the browser at `/report.html`.
+
 Approve architecture:
 
 ```sh

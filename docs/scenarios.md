@@ -1,10 +1,14 @@
 # Scenario Demonstrations
 
+## Running from the report UI
+
+Open `/report.html`, choose a scenario, and generate the run. Enable **Manual step mode** to execute one dependency-ready task at a time with **Run next step**. Architecture and Release Readiness still pause for a reviewer decision. The run ID can be used to load or refresh the report.
+
 ## Greenfield
 
 Request: build a secure URL shortener with redirects, TTL, analytics, and operational controls.
 
-The Requirements Agent produces normalized requirements and classification. The Architecture Agent produces an ADR, API contract, persistence model, and architecture validation, then pauses for approval. Implementation produces the migration and implementation artifacts. Security and performance reviews execute in parallel, QA waits for both, and Observability precedes the release approval. Evidence is available through artifacts, validations, task dependencies, approvals, and audit trail in the persisted run snapshot.
+The Requirements Agent produces normalized requirements and classification. The Architecture Agent produces an ADR, API contract, persistence model, and architecture validation, then pauses for approval. Implementation produces the migration and implementation artifacts. Security and performance reviews are independently eligible in parallel during automatic execution; manual mode advances one ready review at a time. QA waits for both, and Observability precedes the release approval. Evidence is available through artifacts, validations, task dependencies, approvals, and audit trail in the persisted run snapshot.
 
 Start with `POST /api/orchestration/scenarios/greenfield/runs`.
 

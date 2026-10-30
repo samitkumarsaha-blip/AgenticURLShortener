@@ -16,6 +16,7 @@ public enum WorkflowStage
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum WorkflowStatus
 {
+    AwaitingStep,
     AwaitingApproval,
     Running,
     Replanning,
@@ -35,7 +36,7 @@ public enum WorkflowTaskStatus
     RolledBack
 }
 
-public sealed record StartWorkflowRequest(string Requirements, string Scenario = "greenfield");
+public sealed record StartWorkflowRequest(string Requirements, string Scenario = "greenfield", bool StepMode = false);
 public sealed record ApprovalRequest(string Stage, bool Approved, string Reviewer, string Rationale);
 public sealed record ReplanRequest(string Requirements, string Rationale);
 
@@ -65,6 +66,7 @@ public sealed class WorkflowRun
     public Guid Id { get; init; } = Guid.NewGuid();
     public string Requirements { get; set; } = string.Empty;
     public string Scenario { get; set; } = "greenfield";
+    public bool StepMode { get; set; }
     public WorkflowStage CurrentStage { get; set; } = WorkflowStage.Requirements;
     public WorkflowStatus Status { get; set; } = WorkflowStatus.Running;
     public int PlanVersion { get; set; } = 1;

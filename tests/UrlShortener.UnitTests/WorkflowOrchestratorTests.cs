@@ -44,6 +44,42 @@ public sealed class WorkflowOrchestratorTests
     }
 
     [Fact]
+    public async Task ManualStepModeAdvancesOneReadyTaskAndPausesAtApprovalGates()
+    {
+        var orchestrator = CreateOrchestrator();
+        var run = await orchestrator.StartAsync(
+            new StartWorkflowRequest("Build a URL shortener", StepMode: true), CancellationToken.None);
+
+        Assert.Equal(WorkflowStatus.AwaitingStep, run.Status);
+        Assert.Equal(WorkflowTaskStatus.Succeeded, Assert.Single(run.Tasks, task => task.Id == "requirements").Status);
+        Assert.Equal(WorkflowTaskStatus.Pending, Assert.Single(run.Tasks, task => task.Id == "architecture").Status);
+
+        run = (await orchestrator.AdvanceStepAsync(run.Id, CancellationToken.None))!;
+        Assert.Equal(WorkflowStatus.AwaitingApproval, run.Status);
+        Assert.Equal(WorkflowStage.Architecture, run.CurrentStage);
+
+        run = (await orchestrator.ApproveAsync(run.Id,
+            new ApprovalRequest("Architecture", true, "reviewer", "Approved"), CancellationToken.None))!;
+        Assert.Equal(WorkflowStatus.AwaitingStep, run.Status);
+        Assert.Equal(WorkflowTaskStatus.Pending, Assert.Single(run.Tasks, task => task.Id == "implementation").Status);
+
+        var succeededCount = run.Tasks.Count(task => task.Status == WorkflowTaskStatus.Succeeded);
+        while (run.Status == WorkflowStatus.AwaitingStep)
+        {
+            run = (await orchestrator.AdvanceStepAsync(run.Id, CancellationToken.None))!;
+            var newSucceededCount = run.Tasks.Count(task => task.Status == WorkflowTaskStatus.Succeeded);
+            Assert.Equal(succeededCount + 1, newSucceededCount);
+            succeededCount = newSucceededCount;
+        }
+
+        Assert.Equal(WorkflowStatus.AwaitingApproval, run.Status);
+        Assert.Equal(WorkflowStage.ReleaseReadiness, run.CurrentStage);
+        run = (await orchestrator.ApproveAsync(run.Id,
+            new ApprovalRequest("ReleaseReadiness", true, "reviewer", "Approved"), CancellationToken.None))!;
+        Assert.Equal(WorkflowStatus.Completed, run.Status);
+    }
+
+    [Fact]
     public async Task StopsAfterThreeAttemptsWhenAnAgentFails()
     {
         var orchestrator = new WorkflowOrchestrator([

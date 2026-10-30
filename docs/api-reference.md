@@ -123,11 +123,12 @@ Returns the greenfield, brownfield, and ambiguous scenario definitions, includin
 ```json
 {
   "requirements": "Build a secure URL shortener with analytics",
-  "scenario": "greenfield"
+  "scenario": "greenfield",
+  "stepMode": true
 }
 ```
 
-Returns `202 Accepted` with the current run snapshot. A normal run pauses at the Architecture approval gate.
+`scenario` defaults to `greenfield`. `stepMode` is optional and defaults to `false`. Returns `202 Accepted` with the current run snapshot. Automatic mode runs ready tasks until the Architecture approval gate. In manual step mode, starting a run executes the Requirements task and returns `AwaitingStep`.
 
 ### Start a predefined scenario
 
@@ -140,6 +141,14 @@ Supported values: `greenfield`, `brownfield`, `ambiguous`.
 `GET /api/orchestration/runs/{id}`
 
 The snapshot includes status, current stage, plan version, task graph, artifacts, decisions, risks, validations, approvals, retry count, rollback count, checkpoints, safe-stop reason, and audit trail.
+
+### Advance one manual step
+
+`POST /api/orchestration/runs/{id}/steps`
+
+Executes one dependency-ready task for a run created with `stepMode: true`, then returns the updated run snapshot with `200 OK`. If that task reaches an approval gate, the run returns with `AwaitingApproval`. After approval, the run returns to `AwaitingStep`; call this endpoint again to advance. A run that is not waiting for a manual step returns `409 Conflict`; an unknown run returns `404 Not Found`.
+
+`AwaitingStep` means the next eligible task is waiting for an explicit advance. In automatic mode, approval resumes execution through the next gate; in manual mode, approval enables the next explicit step.
 
 ### Approve or reject a gate
 
@@ -154,7 +163,11 @@ The snapshot includes status, current stage, plan version, task graph, artifacts
 }
 ```
 
-Supported gated stages are `Architecture` and `ReleaseReadiness`. Rejection transitions the run to `Rejected`; approval allows the dependency graph to continue.
+Supported gated stages are `Architecture` and `ReleaseReadiness`. Rejection transitions the run to `Rejected`; approval allows automatic execution to resume or makes the next task available in manual step mode.
+
+### Report UI
+
+Open `/report.html` to create a run, select manual step mode, inspect the task travel path and run evidence, approve or reject gates, or load/refresh a run using its ID. Manual step mode is opt-in; the UI's default run behavior remains automatic.
 
 ### Replan
 

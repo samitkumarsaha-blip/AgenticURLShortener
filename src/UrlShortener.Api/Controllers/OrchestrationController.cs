@@ -39,6 +39,21 @@ public sealed class OrchestrationController(IWorkflowOrchestrator orchestrator) 
     public async Task<ActionResult<WorkflowRun>> Get(Guid id, CancellationToken cancellationToken) =>
         await orchestrator.GetAsync(id, cancellationToken) is { } run ? Ok(run) : NotFound();
 
+    [HttpPost("{id:guid}/steps")]
+    public async Task<ActionResult<WorkflowRun>> AdvanceStep(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await orchestrator.AdvanceStepAsync(id, cancellationToken) is { } run
+                ? Ok(run)
+                : NotFound();
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Conflict(new ProblemDetails { Title = "Step unavailable", Detail = exception.Message });
+        }
+    }
+
     [HttpPost("{id:guid}/approvals")]
     public async Task<ActionResult<WorkflowRun>> Approve(Guid id, ApprovalRequest request, CancellationToken cancellationToken) =>
         await orchestrator.ApproveAsync(id, request, cancellationToken) is { } run ? Ok(run) : NotFound();

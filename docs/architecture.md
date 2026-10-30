@@ -20,15 +20,17 @@ The Domain project owns URL validation, expiration, click behavior, and entities
 
 The engine creates these task nodes:
 
-1. requirements
-2. architecture, dependent on requirements
-3. implementation, dependent on architecture
-4. security-review and performance-review, parallel after implementation
-5. qa-validation, dependent on both reviews
-6. observability
-7. release-readiness
+1. Requirements
+2. Architecture, dependent on Requirements
+3. Implementation, dependent on Architecture
+4. Security Review and Performance Review, parallel after Implementation
+5. QA Validation, dependent on both reviews
+6. Observability
+7. Release Readiness
 
 Architecture and release-readiness are human approval gates. Each task records status, dependencies, attempts, error detail, and audit events. Autonomous retry is capped at three attempts. Exhaustion transitions the run to SafeStopped. A checkpoint is created before implementation; rollback restores task statuses to that checkpoint. Replanning invalidates only tasks at or after the impacted stage and increments the plan version.
+
+Runs default to automatic dependency execution. Optional manual step mode executes the Requirements task when the run starts, then waits for an explicit advance for each next eligible task. Architecture and release-readiness still require human approval; in manual mode, approval makes the next task available without executing it.
 
 Each agent produces inspectable outputs in the run snapshot:
 
