@@ -1,4 +1,4 @@
-# Agentic URL Shortener
+# LinkPilot
 
 A .NET 8 ASP.NET Core URL shortener with SQLite persistence and a governed SDLC orchestration engine. SQLite is the first EF Core provider; the application and domain layers depend on provider-neutral interfaces so SQL Server can be introduced later.
 
